@@ -41,7 +41,9 @@ class TVUnit extends Model
         'Fri',
         'Sat',
         'Sun',
-        'user_id'
+        'user_id',
+        'total',
+        'is_sold'
     ];
 
     public function owner(){

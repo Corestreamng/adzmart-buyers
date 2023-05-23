@@ -18,6 +18,7 @@ class CreateUnitOrderRadioItemsTable extends Migration
             $table->unsignedBigInteger('radio_unit_id');
             $table->unsignedBigInteger('unit_order_id');
             $table->integer('quantity')->default(1);
+            $table->text('description')->nullable();
             $table->timestamps();
         });
     }

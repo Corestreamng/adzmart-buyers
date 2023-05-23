@@ -32,6 +32,8 @@ class Billboard extends Model
         'user_id',
         'created_at',
         'updated_at',
+        'total',
+        'is_sold'
     ];
 
     public function images(){

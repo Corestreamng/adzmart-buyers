@@ -19,7 +19,9 @@ class Cinema extends Model
         'location',
         'rate_per_spot',
         'state',
-        'user_id'
+        'user_id',
+        'total',
+        'is_sold'
     ];
 
     public function owner(){

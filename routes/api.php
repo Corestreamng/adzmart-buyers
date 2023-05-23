@@ -10,6 +10,7 @@ use App\Http\Controllers\RadioUnitController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierOwnerController;
 use App\Http\Controllers\TVUnitController;
+use App\Http\Controllers\UnitOrderController;
 
 /*
 |--------------------------------------------------------------------------
@@ -78,4 +79,11 @@ Route::controller(TVUnitController::class)->group(function () {
     Route::get('tvs', 'getAllTVs');
     Route::get('tvs/{id}', 'getTV');
 
+});
+
+Route::controller(UnitOrderController::class)->group(function () {
+    Route::post('create-order', 'createOrder');
+    Route::get('get-my-orders', 'getAllMyOrders');
+    Route::delete('delete-order/{order_id}', 'deleteOrder');
+    Route::post('pay-order/{order_id}', 'payOrder');
 });

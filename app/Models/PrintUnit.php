@@ -27,6 +27,7 @@ class PrintUnit extends Model
         'user_id',
         'created_at',
         'updated_at',
+        'is_sold'
     ];
 
     public function owner(){
