@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AdminAuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -36,6 +37,18 @@ Route::controller(AuthController::class)->group(function () {
 
     Route::post('reset-pass-link', 'sendResetLinkEmail');
     Route::post('reset-pass', 'resetPassword');
+
+});
+
+Route::controller(AdminAuthController::class)->group(function () {
+    Route::post('admin/login', 'login');
+    Route::post('admin/register', 'register');
+    Route::post('admin/update-profile', 'updateProfile');
+    Route::post('admin/logout', 'logout');
+    Route::post('admin/refresh', 'refresh');
+
+    Route::post('admin/reset-pass-link', 'sendResetLinkEmail');
+    Route::post('admin/reset-pass', 'resetPassword');
 
 });
 

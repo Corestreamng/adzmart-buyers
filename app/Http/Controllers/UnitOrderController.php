@@ -120,7 +120,7 @@ class UnitOrderController extends Controller
                     $print_item->unit_order_id = $unit_order->id;
                     $print_item->description = $descriptions[$i] ?? null;
                     $print_item->save();
-                    if (null != $media[$i] && $request->hasFile('media')[$i]) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
                         $path = $file->store('uploads/radio_media');
                         $unit_item_media = new UnitOrderPrintItemMedia;
@@ -143,7 +143,7 @@ class UnitOrderController extends Controller
                     $cinema_item->unit_order_id = $unit_order->id;
                     $cinema_item->description = $descriptions[$i] ?? null;
                     $cinema_item->save();
-                    if (null != $media[$i] && $request->hasFile('media')[$i]) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
                         $path = $file->store('uploads/cinema_media');
                         $unit_item_media = new UnitOrderCinemaItemMedia;
@@ -166,7 +166,7 @@ class UnitOrderController extends Controller
                     $billboard_item->unit_order_id = $unit_order->id;
                     $billboard_item->description = $descriptions[$i] ?? null;
                     $billboard_item->save();
-                    if (null != $media[$i] && $request->hasFile('media')[$i]) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
                         $path = $file->store('uploads/radio_media');
                         $unit_item_media = new UnitOrderBillboardItemMedia;
