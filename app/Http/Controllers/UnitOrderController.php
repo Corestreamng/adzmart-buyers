@@ -38,6 +38,7 @@ class UnitOrderController extends Controller
     public function createOrder(Request $request)
     {
         try {
+            // dd($request->all());
             $buyer_id = Auth::id();
             $request->validate([
                 'items' => 'required|array',
@@ -47,7 +48,7 @@ class UnitOrderController extends Controller
                 'media' => 'nullable|array',
                 'media.*' => 'file',
                 'desc' => 'nullable|array',
-                'desc.*' => 'text',
+                'desc.*' => 'string',
             ]);
 
             $items = $request->input('items');
@@ -74,9 +75,10 @@ class UnitOrderController extends Controller
                     $tv_item->unit_order_id = $unit_order->id;
                     $tv_item->description = $descriptions[$i] ?? null;
                     $tv_item->save();
-                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
+                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
+                        // dd('tv_mea');
                         $file = $request->file('media')[$i];
-                        $path = $file->store('uploads/tv_media');
+                        $path = $file->store('unit_media',['exception' => true]);
                         $unit_item_media = new UnitOrderTVItemMedia;
                         $unit_item_media->unit_order_item_id = $tv_item->id;
                         $unit_item_media->media = $path;
@@ -97,9 +99,9 @@ class UnitOrderController extends Controller
                     $radio_item->unit_order_id = $unit_order->id;
                     $radio_item->description = $descriptions[$i] ?? null;
                     $radio_item->save();
-                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
+                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('uploads/radio_media');
+                        $path = $file->store('unit_media',['exception' => true]);
                         $unit_item_media = new UnitOrderRadioItemMedia;
                         $unit_item_media->unit_order_item_id = $radio_item->id;
                         $unit_item_media->media = $path;
@@ -120,9 +122,9 @@ class UnitOrderController extends Controller
                     $print_item->unit_order_id = $unit_order->id;
                     $print_item->description = $descriptions[$i] ?? null;
                     $print_item->save();
-                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
+                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('uploads/radio_media');
+                        $path = $file->store('unit_media',['exception' => true]);
                         $unit_item_media = new UnitOrderPrintItemMedia;
                         $unit_item_media->unit_order_item_id = $print_item->id;
                         $unit_item_media->media = $path;
@@ -143,9 +145,9 @@ class UnitOrderController extends Controller
                     $cinema_item->unit_order_id = $unit_order->id;
                     $cinema_item->description = $descriptions[$i] ?? null;
                     $cinema_item->save();
-                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
+                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('uploads/cinema_media');
+                        $path = $file->store('unit_media',['exception' => true]);
                         $unit_item_media = new UnitOrderCinemaItemMedia;
                         $unit_item_media->unit_order_item_id = $cinema_item->id;
                         $unit_item_media->media = $path;
@@ -166,9 +168,9 @@ class UnitOrderController extends Controller
                     $billboard_item->unit_order_id = $unit_order->id;
                     $billboard_item->description = $descriptions[$i] ?? null;
                     $billboard_item->save();
-                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
+                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('uploads/radio_media');
+                        $path = $file->store('unit_media',['exception' => true]);
                         $unit_item_media = new UnitOrderBillboardItemMedia;
                         $unit_item_media->unit_order_item_id = $billboard_item->id;
                         $unit_item_media->media = $path;
@@ -208,7 +210,7 @@ class UnitOrderController extends Controller
             $sortDirection = $request->input('sort_direction', 'asc');
             $search = $request->input('search');
             $filters = $request->input('filters', []);
-            $data = UnitOrder::with(['tv_unit_items', 'radio_unit_items', 'cinema_unit_items', 'print_unit_items', 'billboard_unit_items', 'payments'])
+            $data = UnitOrder::with(['tv_unit_items','tv_unit_items.unit', 'radio_unit_items','radio_unit_items.unit', 'cinema_unit_items','cinema_unit_items.unit', 'print_unit_items', 'print_unit_items.unit', 'billboard_unit_items', 'billboard_unit_items.unit', 'payments'])
                 ->where('buyer_id', Auth::id())->where('status', 1);
 
             $columns = [

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AdminAuthController;
+use App\Http\Controllers\AdminController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
@@ -99,4 +100,20 @@ Route::controller(UnitOrderController::class)->group(function () {
     Route::get('get-my-orders', 'getAllMyOrders');
     Route::delete('delete-order/{order_id}', 'deleteOrder');
     Route::post('pay-order/{order_id}', 'payOrder');
+});
+
+Route::controller(AdminController::class)->group(function () {
+    Route::get('get-all-orders', 'getAllOrders');
+    Route::get('get-all-radio-order-items', 'getAllRadioOrderItems');
+    Route::get('get-running-radio-order-items', 'getRunningRadioOrderItems');
+    Route::get('get-complete-radio-order-items', 'getCompleteRadioOrderItems');
+    Route::get('get-pending-radio-order-items', 'getPendingRadioOrderItems');
+    Route::get('get-declined-radio-order-items', 'getDeclinedRadioOrderItems');
+    Route::get('get-all-tv-order-items', 'getAllTVOrderItems');
+    Route::get('get-all-cinema-order-items', 'getAllCinemaOrderItems');
+    Route::get('get-all-billboard-order-items', 'getAllBillboardOrderItems');
+    Route::get('get-all-print-order-items', 'getAllPrintOrderItems');
+
+    Route::get('get-all-funds', 'getAllFunds');
+    Route::delete('delete-order/{order_id}', 'deleteOrder');
 });
