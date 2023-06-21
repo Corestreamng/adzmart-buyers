@@ -7,6 +7,7 @@ use App\Models\Cinema;
 use App\Models\Payment;
 use App\Models\PrintUnit;
 use App\Models\RadioUnit;
+use App\Models\Supplier;
 use App\Models\TVUnit;
 use Illuminate\Http\Request;
 use App\Models\UnitOrder;
@@ -27,6 +28,10 @@ use Ramsey\Uuid\Rfc4122\UuidV4;
 
 class AdminController extends Controller
 {
+    public function __construct()
+    {
+        $this->middleware('auth:api-admin', ['except' => []]);
+    }
     /**
      * Get all active orders
      */
@@ -144,7 +149,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all payments fetched',
-                'data' => ['total_funds' => $total_funds, 'payments'=>$data->items()],
+                'data' => ['total_funds' => $total_funds, 'payments' => $data->items()],
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -223,7 +228,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
-                'data' => ['total_funds'=>'...','orders' => $data->items()],
+                'data' => ['total_funds' => '...', 'orders' => $data->items()],
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -256,7 +261,7 @@ class AdminController extends Controller
             $search = $request->input('search');
             $filters = $request->input('filters', []);
             $data = UnitOrderRadioItem::with([
-                'unit_order','unit_order.payments', 'media','unit'
+                'unit_order', 'unit_order.payments', 'media', 'unit'
             ])->whereHas('unit', function ($q) {
                 $q->where('progress', '=', "Running");
             });
@@ -333,7 +338,7 @@ class AdminController extends Controller
             $search = $request->input('search');
             $filters = $request->input('filters', []);
             $data = UnitOrderRadioItem::with([
-                'unit_order','unit_order.payments', 'media','unit'
+                'unit_order', 'unit_order.payments', 'media', 'unit'
             ])->whereHas('unit', function ($q) {
                 $q->where('progress', '=', "Processing");
             });
@@ -410,7 +415,7 @@ class AdminController extends Controller
             $search = $request->input('search');
             $filters = $request->input('filters', []);
             $data = UnitOrderRadioItem::with([
-                'unit_order','unit_order.payments', 'media','unit'
+                'unit_order', 'unit_order.payments', 'media', 'unit'
             ])->whereHas('unit', function ($q) {
                 $q->where('progress', '=', "Complete");
             });
@@ -490,7 +495,7 @@ class AdminController extends Controller
                 'unit' => function ($q) {
                     $q->where('progress', '=', "Declined");
                 },
-                'unit_order','unit_order.payments', 'media','unit'
+                'unit_order', 'unit_order.payments', 'media', 'unit'
             ]);
 
             // $data = UnitOrderRadioItem::with([
@@ -631,6 +636,316 @@ class AdminController extends Controller
     }
 
     /**
+     * Get running radio items
+     */
+    public function getRunningTVOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getPendingTVOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Processing");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getCompleteTVOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Complete");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getDeclinedTVOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderTVItem::with([
+                'unit' => function ($q) {
+                    $q->where('progress', '=', "Declined");
+                },
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ]);
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'radio_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+
+    /**
      * Get all radio items
      */
     public function getAllCinemaOrderItems(Request $request)
@@ -707,6 +1022,317 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * Get running radio items
+     */
+    public function getRunningCinemaOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getPendingCinemaOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Processing");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getCompleteCinemaOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Complete");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getDeclinedCinemaOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderCinemaItem::with([
+                'unit' => function ($q) {
+                    $q->where('progress', '=', "Declined");
+                },
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ]);
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'radio_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+
 
     /**
      * Get all radio items
@@ -787,6 +1413,317 @@ class AdminController extends Controller
     }
 
     /**
+     * Get running radio items
+     */
+    public function getRunningBillboardOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getPendingBillboardOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Processing");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getCompleteBillboardOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Complete");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getDeclinedBillboardOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderBillboardItem::with([
+                'unit' => function ($q) {
+                    $q->where('progress', '=', "Declined");
+                },
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ]);
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'radio_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+
+
+    /**
      * Get all radio items
      */
     public function getAllPrintOrderItems(Request $request)
@@ -856,6 +1793,516 @@ class AdminController extends Controller
                 ],
             ]);
         } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+    /**
+     * Get running radio items
+     */
+    public function getRunningPrintOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getPendingPrintOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Processing");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getCompletePrintOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Complete");
+            });
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'tv_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get running radio items
+     */
+    public function getDeclinedPrintOrderItems(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+            $data = UnitOrderPrintItem::with([
+                'unit' => function ($q) {
+                    $q->where('progress', '=', "Declined");
+                },
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ]);
+
+            // $data = UnitOrderRadioItem::with([
+            //     'unit',
+            //     'unit_order', 'unit_order.payments', 'media'
+            // ]);
+
+            $columns = [
+                'radio_unit_id',
+                'unit_order_id',
+                'description',
+                'quantity'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all orders fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all unverifed supliers
+     */
+    public function getAllUnverifiedSellers(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+
+            $data = Supplier::with([
+                'owner',
+            ])->where('is_verified',false);
+
+
+            $columns = [
+                'uuid',
+                'company_name',
+                'company_location',
+                'rc_number',
+                'government_id',
+                'is_verified',
+                'owner_id',
+                'created_at',
+                'updated_at',
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all unverified suppliers fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get suplier
+     */
+    public function getSeller(Request $request,$supplier_id)
+    {
+        try {
+            $data = Supplier::with([
+                'owner',
+            ])->where('id',$supplier_id)->first();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'supplier fetched',
+                'data' => $data,
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all supliers items
+     */
+    public function getAllSellers(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+
+            $data = Supplier::with([
+                'owner',
+            ]);
+
+            $columns = [
+                'uuid',
+                'company_name',
+                'company_location',
+                'rc_number',
+                'government_id',
+                'is_verified',
+                'owner_id',
+                'created_at',
+                'updated_at',
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all suppliers fetched',
+                'data' => $data->items(),
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * approve suplier
+     */
+    public function approveSeller(Request $request, $supplier_id)
+    {
+        try {
+            DB::beginTransaction();
+            $supplier = Supplier::find($supplier_id);
+            $supplier->update([
+                'is_verified'=>true
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'profile approval successful',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
             Log::error($e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'status' => 'failure',

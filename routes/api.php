@@ -7,12 +7,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\BillboardController;
 use App\Http\Controllers\CinemaController;
+use App\Http\Controllers\ExpertReqController;
 use App\Http\Controllers\PrintUnitController;
 use App\Http\Controllers\RadioUnitController;
 use App\Http\Controllers\SupplierController;
 use App\Http\Controllers\SupplierOwnerController;
 use App\Http\Controllers\TVUnitController;
 use App\Http\Controllers\UnitOrderController;
+use App\Http\Controllers\MailingListController;
 
 /*
 |--------------------------------------------------------------------------
@@ -109,11 +111,54 @@ Route::controller(AdminController::class)->group(function () {
     Route::get('get-complete-radio-order-items', 'getCompleteRadioOrderItems');
     Route::get('get-pending-radio-order-items', 'getPendingRadioOrderItems');
     Route::get('get-declined-radio-order-items', 'getDeclinedRadioOrderItems');
+
     Route::get('get-all-tv-order-items', 'getAllTVOrderItems');
+    Route::get('get-all-tv-order-items', 'getAllTVOrderItems');
+    Route::get('get-running-tv-order-items', 'getRunningTVOrderItems');
+    Route::get('get-complete-tv-order-items', 'getCompleteTVOrderItems');
+    Route::get('get-pending-tv-order-items', 'getPendingTVOrderItems');
+    Route::get('get-declined-tv-order-items', 'getDeclinedTVOrderItems');
+
     Route::get('get-all-cinema-order-items', 'getAllCinemaOrderItems');
+    Route::get('get-all-cinema-order-items', 'getAllCinemaOrderItems');
+    Route::get('get-all-cinema-order-items', 'getAllCinemaOrderItems');
+    Route::get('get-running-cinema-order-items', 'getRunningCinemaOrderItems');
+    Route::get('get-complete-cinema-order-items', 'getCompleteCinemaOrderItems');
+    Route::get('get-pending-cinema-order-items', 'getPendingCinemaOrderItems');
+    Route::get('get-declined-cinema-order-items', 'getDeclinedCinemaOrderItems');
+
     Route::get('get-all-billboard-order-items', 'getAllBillboardOrderItems');
+    Route::get('get-all-billboard-order-items', 'getAllBillboardOrderItems');
+    Route::get('get-all-billboard-order-items', 'getAllBillboardOrderItems');
+    Route::get('get-running-billboard-order-items', 'getRunningBillboardOrderItems');
+    Route::get('get-complete-billboard-order-items', 'getCompleteBillboardOrderItems');
+    Route::get('get-pending-billboard-order-items', 'getPendingBillboardOrderItems');
+    Route::get('get-declined-billboard-order-items', 'getDeclinedBillboardOrderItems');
+
     Route::get('get-all-print-order-items', 'getAllPrintOrderItems');
+    Route::get('get-all-print-order-items', 'getAllPrintOrderItems');
+    Route::get('get-all-print-order-items', 'getAllPrintOrderItems');
+    Route::get('get-running-print-order-items', 'getRunningPrintOrderItems');
+    Route::get('get-complete-print-order-items', 'getCompletePrintOrderItems');
+    Route::get('get-pending-print-order-items', 'getPendingPrintOrderItems');
+    Route::get('get-declined-print-order-items', 'getDeclinedPrintOrderItems');
 
     Route::get('get-all-funds', 'getAllFunds');
+    Route::get('get-unverified-sellers', 'getAllUnverifiedSellers');
+    Route::get('get-all-sellers', 'getAllSellers');
+    Route::get('get-seller/{supplier_id}', 'getSeller');
+    Route::post('approve-seller/{supplier_id}', 'approveSeller');
     Route::delete('delete-order/{order_id}', 'deleteOrder');
+});
+
+Route::controller(ExpertReqController::class)->group(function () {
+    Route::get('get-all-expert-requests', 'index');
+    Route::get('get-expert-request/{id}','show');
+    Route::post('create-expert-request', 'store');
+    Route::post('update-expert-request/{id}', 'update');
+});
+
+Route::controller(MailingListController::class)->group(function () {
+    Route::post('subscribe', 'subscribe');
+    Route::post('unsubscribe', 'unsubscribe');
 });

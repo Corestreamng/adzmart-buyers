@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\UnitOrderTVItemMedia;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -14,5 +15,6 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    $q = UnitOrderTVItemMedia::find(1);
+    return view('welcome', ['media'=> $q]);
 });
