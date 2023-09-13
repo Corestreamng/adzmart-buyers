@@ -84,6 +84,7 @@ class AdminAuthController extends Controller
     {
         $request->validate([
             'name' => 'required|string|max:255',
+            'password' => 'nullable|min:6|confirmed'
         ]);
 
         $user = Auth::guard('api-admin')->id();
@@ -94,6 +95,11 @@ class AdminAuthController extends Controller
         $user = $user->update([
             'name' => $request->name,
         ]);
+
+        if (isset($request->password)) {
+            Admin::find(Auth::guard('api-admin')->id())->update(['password' => Hash::make($request->password)]);
+        }
+
 
         if ($user) {
             $user = Auth::guard('api-admin')->id();

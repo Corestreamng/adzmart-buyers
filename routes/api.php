@@ -40,7 +40,6 @@ Route::controller(AuthController::class)->group(function () {
 
     Route::post('reset-pass-link', 'sendResetLinkEmail');
     Route::post('reset-pass', 'resetPassword');
-
 });
 
 Route::controller(AdminAuthController::class)->group(function () {
@@ -53,49 +52,41 @@ Route::controller(AdminAuthController::class)->group(function () {
     Route::post('admin/reset-pass-link', 'sendResetLinkEmail');
     Route::post('admin/reset-pass', 'resetPassword');
     Route::get('get-user-profile', 'getUserProfile');
-
 });
 
 Route::controller(SupplierController::class)->group(function () {
     Route::get('suppliers', 'getAllSuppliers');
     Route::get('suppliers/{id}', 'getSupplier');
-
 });
 
 Route::controller(SupplierOwnerController::class)->group(function () {
     Route::get('owners', 'getAllOwners');
     Route::get('owners/{id}', 'getOwner');
-
 });
 
 Route::controller(BillboardController::class)->group(function () {
     Route::get('billboards', 'getAllBillboards');
     Route::get('billboards/{id}', 'getBillboard');
-
 });
 
 Route::controller(CinemaController::class)->group(function () {
     Route::get('cinemas', 'getAllCinemas');
     Route::get('cinemas/{id}', 'getCinema');
-
 });
 
 Route::controller(RadioUnitController::class)->group(function () {
     Route::get('radios', 'getAllRadios');
     Route::get('radios/{id}', 'getRadio');
-
 });
 
 Route::controller(PrintUnitController::class)->group(function () {
     Route::get('prints', 'getAllPrints');
     Route::get('prints/{id}', 'getPrint');
-
 });
 
 Route::controller(TVUnitController::class)->group(function () {
     Route::get('tvs', 'getAllTVs');
     Route::get('tvs/{id}', 'getTV');
-
 });
 
 Route::controller(UnitOrderController::class)->group(function () {
@@ -107,6 +98,8 @@ Route::controller(UnitOrderController::class)->group(function () {
 
 Route::controller(AdminController::class)->group(function () {
     Route::get('get-all-orders', 'getAllOrders');
+    Route::get('get-all-users', 'getAllUsers');
+    Route::get('get-all-order-stats', 'getAllOrdersByStatus');
     Route::get('get-all-radio-order-items', 'getAllRadioOrderItems');
     Route::get('get-running-radio-order-items', 'getRunningRadioOrderItems');
     Route::get('get-complete-radio-order-items', 'getCompleteRadioOrderItems');
@@ -154,7 +147,7 @@ Route::controller(AdminController::class)->group(function () {
 
 Route::controller(ExpertReqController::class)->group(function () {
     Route::get('get-all-expert-requests', 'index');
-    Route::get('get-expert-request/{id}','show');
+    Route::get('get-expert-request/{id}', 'show');
     Route::post('create-expert-request', 'store');
     Route::post('update-expert-request/{id}', 'update');
 });

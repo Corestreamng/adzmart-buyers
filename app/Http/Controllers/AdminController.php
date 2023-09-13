@@ -21,6 +21,7 @@ use App\Models\UnitOrderRadioItem;
 use App\Models\UnitOrderRadioItemMedia;
 use App\Models\UnitOrderTVItem;
 use App\Models\UnitOrderTVItemMedia;
+use App\Models\User;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -149,7 +150,81 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all payments fetched',
+                'total' => $data->total(),
                 'data' => ['total_funds' => $total_funds, 'payments' => $data->items()],
+                'meta' => [
+                    'current_page' => $data->currentPage(),
+                    'last_page' => $data->lastPage(),
+                    'per_page' => $data->perPage(),
+                    'total' => $data->total(),
+                    'prev_page_url' => $data->previousPageUrl(),
+                    'next_page_url' => $data->nextPageUrl(),
+                    'first_page_url' => $data->url(1),
+                    'last_page_url' => $data->url($data->lastPage()),
+                ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * Get all funds
+     */
+    public function getAllUsers(Request $request)
+    {
+        try {
+            $perPage = $request->input('per_page', 10); // Number of items per page
+            $page = $request->input('page', 1); // Current page number
+            $sortColumn = $request->input('sort_column');
+            $sortDirection = $request->input('sort_direction', 'asc');
+            $search = $request->input('search');
+            $filters = $request->input('filters', []);
+
+            $data = User::with([
+                'team_members', 'team_owner'
+            ]);
+
+            $columns = [
+                'name',
+                'email',
+                'business_name',
+                'is_owner',
+                'belongs_to'
+            ];
+            // Apply search condition if provided
+            if ($search) {
+                $data->where(function ($q) use ($search, $columns) {
+                    foreach ($columns as $column) {
+                        $q->orWhere($column, 'LIKE', '%' . $search . '%');
+                    }
+                });
+            }
+
+            // Apply filters if provided
+            foreach ($filters as $filter) {
+                $column = $filter['column'];
+                $value = $filter['value'];
+
+                if (in_array($column, $columns)) {
+                    $data->where($column, $value);
+                }
+            }
+
+            // Apply sorting if provided
+            if ($sortColumn && in_array($sortColumn, $columns)) {
+                $data->orderBy($sortColumn, $sortDirection);
+            }
+            $data = $data->paginate($perPage, ['*'], 'page', $page);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all users fetched',
+                'total' => $data->total(),
+                'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -228,7 +303,8 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
-                'data' => ['total_funds' => '...', 'orders' => $data->items()],
+                'total' => $data->total(),
+                'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -239,6 +315,138 @@ class AdminController extends Controller
                     'first_page_url' => $data->url(1),
                     'last_page_url' => $data->url($data->lastPage()),
                 ],
+            ]);
+        } catch (\Exception $e) {
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    public function getAllOrdersByStatus(Request $request)
+    {
+        try {
+            $data = [];
+            $data['running_radio'] = UnitOrderRadioItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            })->count();
+            $data['pending_radio'] = UnitOrderRadioItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Not Initiated");
+                $q->orWhere('progress', '=', "Processing");
+            })->count();
+            $data['complete_radio'] = UnitOrderRadioItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "complete");
+            })->count();
+            $data['declined_radio'] = UnitOrderRadioItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Declined");
+            })->count();
+
+
+            $data['running_tv'] = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            })->count();
+            $data['pending_tv'] = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Not Initiated");
+                $q->orWhere('progress', '=', "Processing");
+            })->count();
+            $data['complete_tv'] = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "complete");
+            })->count();
+            $data['declined_tv'] = UnitOrderTVItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Declined");
+            })->count();
+
+
+            $data['running_print'] = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            })->count();
+            $data['pending_print'] = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Not Initiated");
+                $q->orWhere('progress', '=', "Processing");
+            })->count();
+            $data['complete_print'] = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "complete");
+            })->count();
+            $data['declined_print'] = UnitOrderPrintItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Declined");
+            })->count();
+
+
+            $data['running_cinema'] = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            })->count();
+            $data['pending_cinema'] = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Not Initiated");
+                $q->orWhere('progress', '=', "Processing");
+            })->count();
+            $data['complete_cinema'] = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "complete");
+            })->count();
+            $data['declined_cinema'] = UnitOrderCinemaItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Declined");
+            })->count();
+
+
+            $data['running_billboard'] = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Running");
+            })->count();
+            $data['pending_billboard'] = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Not Initiated");
+                $q->orWhere('progress', '=', "Processing");
+            })->count();
+            $data['complete_billboard'] = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "complete");
+            })->count();
+            $data['declined_billboard'] = UnitOrderBillboardItem::with([
+                'unit_order', 'unit_order.payments', 'media', 'unit'
+            ])->whereHas('unit', function ($q) {
+                $q->where('progress', '=', "Declined");
+            })->count();
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'all stats fetched',
+                'data' => $data
             ]);
         } catch (\Exception $e) {
             Log::error($e->getMessage(), ['exception' => $e]);
@@ -304,6 +512,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -381,6 +590,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -458,6 +668,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -536,6 +747,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -615,6 +827,7 @@ class AdminController extends Controller
                 'status' => 'success',
                 'message' => 'all orders fetched',
                 'data' => $data->items(),
+                'total' => $data->total(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -692,6 +905,7 @@ class AdminController extends Controller
                 'status' => 'success',
                 'message' => 'all orders fetched',
                 'data' => $data->items(),
+                'total' => $data->total(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
                     'last_page' => $data->lastPage(),
@@ -768,6 +982,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -845,6 +1060,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -923,6 +1139,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1002,6 +1219,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1079,6 +1297,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1156,6 +1375,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1233,6 +1453,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1311,6 +1532,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1391,6 +1613,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1468,6 +1691,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1545,6 +1769,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1622,6 +1847,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1700,6 +1926,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1780,6 +2007,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1856,6 +2084,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -1933,6 +2162,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -2010,6 +2240,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -2088,6 +2319,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -2124,7 +2356,7 @@ class AdminController extends Controller
 
             $data = Supplier::with([
                 'owner',
-            ])->where('is_verified',false);
+            ])->where('is_verified', false);
 
 
             $columns = [
@@ -2165,6 +2397,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all unverified suppliers fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -2189,12 +2422,12 @@ class AdminController extends Controller
     /**
      * Get suplier
      */
-    public function getSeller(Request $request,$supplier_id)
+    public function getSeller(Request $request, $supplier_id)
     {
         try {
             $data = Supplier::with([
                 'owner',
-            ])->where('id',$supplier_id)->first();
+            ])->where('id', $supplier_id)->first();
             return response()->json([
                 'status' => 'success',
                 'message' => 'supplier fetched',
@@ -2264,6 +2497,7 @@ class AdminController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'all suppliers fetched',
+                'total' => $data->total(),
                 'data' => $data->items(),
                 'meta' => [
                     'current_page' => $data->currentPage(),
@@ -2294,7 +2528,7 @@ class AdminController extends Controller
             DB::beginTransaction();
             $supplier = Supplier::find($supplier_id);
             $supplier->update([
-                'is_verified'=>true
+                'is_verified' => true
             ]);
             DB::commit();
             return response()->json([
