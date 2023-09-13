@@ -52,6 +52,7 @@ Route::controller(AdminAuthController::class)->group(function () {
 
     Route::post('admin/reset-pass-link', 'sendResetLinkEmail');
     Route::post('admin/reset-pass', 'resetPassword');
+    Route::get('get-user-profile', 'getUserProfile');
 
 });
 

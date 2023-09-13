@@ -40,8 +40,7 @@ return [
         | Public Key
         |--------------------------------------------------------------------------
         |
-        | A path or resource to your public key.
-        |
+        | A path or resource to your public key.        |
         | E.g. 'file://path/to/public/key'
         |
         */
@@ -89,7 +88,7 @@ return [
     |
     */
 
-    'ttl' => env('JWT_TTL', 60),
+    'ttl' => env('JWT_TTL', null),
 
     /*
     |--------------------------------------------------------------------------
@@ -138,7 +137,7 @@ return [
     'required_claims' => [
         'iss',
         'iat',
-        'exp',
+        //'exp',
         'nbf',
         'sub',
         'jti',

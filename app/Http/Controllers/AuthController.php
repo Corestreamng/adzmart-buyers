@@ -82,11 +82,30 @@ class AuthController extends Controller
         ]);
     }
 
+    public function getUserProfile()
+    {
+        $user = Auth::user();
+
+        if ($user) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User profile fetched successfully',
+                'user' => $user,
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'failure',
+                'message' => 'User profile fetch failed',
+            ], 500);
+        }
+    }
+
     public function updateProfile(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'business_name' => 'nullable|min:2|max:255',
+            'password' => 'nullable|min:6|confirmed'
         ]);
 
         $user = Auth::id();
@@ -98,6 +117,10 @@ class AuthController extends Controller
             'name' => $request->name,
             'business_name' => $request->business_name ?? null
         ]);
+
+        if(isset($request->password)){
+            User::find(Auth::id())->update(['password' => Hash::make($request->password)]);
+	}
 
         if ($user) {
             $user = Auth::id();

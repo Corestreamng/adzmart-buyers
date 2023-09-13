@@ -37,8 +37,8 @@ class UnitOrderController extends Controller
      */
     public function createOrder(Request $request)
     {
+        //dd($request->all());
         try {
-            // dd($request->all());
             $buyer_id = Auth::id();
             $request->validate([
                 'items' => 'required|array',
@@ -75,10 +75,9 @@ class UnitOrderController extends Controller
                     $tv_item->unit_order_id = $unit_order->id;
                     $tv_item->description = $descriptions[$i] ?? null;
                     $tv_item->save();
-                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
-                        // dd('tv_mea');
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('unit_media',['exception' => true]);
+                        $path = $file->store('public',['exception' => true]);
                         $unit_item_media = new UnitOrderTVItemMedia;
                         $unit_item_media->unit_order_item_id = $tv_item->id;
                         $unit_item_media->media = $path;
@@ -99,9 +98,9 @@ class UnitOrderController extends Controller
                     $radio_item->unit_order_id = $unit_order->id;
                     $radio_item->description = $descriptions[$i] ?? null;
                     $radio_item->save();
-                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('unit_media',['exception' => true]);
+                        $path = $file->store('public',['exception' => true]);
                         $unit_item_media = new UnitOrderRadioItemMedia;
                         $unit_item_media->unit_order_item_id = $radio_item->id;
                         $unit_item_media->media = $path;
@@ -122,9 +121,9 @@ class UnitOrderController extends Controller
                     $print_item->unit_order_id = $unit_order->id;
                     $print_item->description = $descriptions[$i] ?? null;
                     $print_item->save();
-                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('unit_media',['exception' => true]);
+                        $path = $file->store('public',['exception' => true]);
                         $unit_item_media = new UnitOrderPrintItemMedia;
                         $unit_item_media->unit_order_item_id = $print_item->id;
                         $unit_item_media->media = $path;
@@ -145,9 +144,9 @@ class UnitOrderController extends Controller
                     $cinema_item->unit_order_id = $unit_order->id;
                     $cinema_item->description = $descriptions[$i] ?? null;
                     $cinema_item->save();
-                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('unit_media',['exception' => true]);
+                        $path = $file->store('public',['exception' => true]);
                         $unit_item_media = new UnitOrderCinemaItemMedia;
                         $unit_item_media->unit_order_item_id = $cinema_item->id;
                         $unit_item_media->media = $path;
@@ -168,9 +167,9 @@ class UnitOrderController extends Controller
                     $billboard_item->unit_order_id = $unit_order->id;
                     $billboard_item->description = $descriptions[$i] ?? null;
                     $billboard_item->save();
-                    if ($request->hasFile('media') && isset($request->file('media')[$i])) {
+                    if (isset($media[$i]) && $request->hasFile('media')[$i]) {
                         $file = $request->file('media')[$i];
-                        $path = $file->store('unit_media',['exception' => true]);
+                        $path = $file->store('public',['exception' => true]);
                         $unit_item_media = new UnitOrderBillboardItemMedia;
                         $unit_item_media->unit_order_item_id = $billboard_item->id;
                         $unit_item_media->media = $path;
@@ -193,7 +192,8 @@ class UnitOrderController extends Controller
             Log::error($e->getMessage(), ['exception' => $e]);
             return response()->json([
                 'status' => 'failure',
-                'message' => "An error occured"
+                'message' => "An error occured",
+		'err' => $e->getMessage()
             ], 500);
         }
     }
@@ -210,7 +210,7 @@ class UnitOrderController extends Controller
             $sortDirection = $request->input('sort_direction', 'asc');
             $search = $request->input('search');
             $filters = $request->input('filters', []);
-            $data = UnitOrder::with(['tv_unit_items','tv_unit_items.unit', 'radio_unit_items','radio_unit_items.unit', 'cinema_unit_items','cinema_unit_items.unit', 'print_unit_items', 'print_unit_items.unit', 'billboard_unit_items', 'billboard_unit_items.unit', 'payments'])
+            $data = UnitOrder::with(['tv_unit_items.unit', 'radio_unit_items.unit', 'cinema_unit_items.unit', 'print_unit_items.unit', 'billboard_unit_items.unit', 'payments'])
                 ->where('buyer_id', Auth::id())->where('status', 1);
 
             $columns = [
@@ -240,6 +240,23 @@ class UnitOrderController extends Controller
                 $data->orderBy($sortColumn, $sortDirection);
             }
             $data = $data->paginate($perPage, ['*'], 'page', $page);
+            foreach ($data->items() as &$item) {
+                foreach ($item['billboard_unit_items'] as &$billboardItem) {
+                    $billboardItem['progress'] = $billboardItem['unit']['progress'];
+                }
+                foreach ($item['tv_unit_items'] as &$tv_unit_item) {
+                    $tv_unit_item['progress'] = $tv_unit_item['unit']['progress'];
+                }
+                foreach ($item['radio_unit_items'] as &$radio_unit_item) {
+                    $radio_unit_item['progress'] = $radio_unit_item['unit']['progress'];
+                }
+                foreach ($item['cinema_unit_items'] as &$cinema_unit_item) {
+                    $cinema_unit_item['progress'] = $cinema_unit_item['unit']['progress'];
+                }
+                foreach ($item['print_unit_items'] as &$print_unit_item) {
+                    $print_unit_item['progress'] = $print_unit_item['unit']['progress'];
+                }
+            }
             return response()->json([
                 'status' => 'success',
                 'message' => 'all orders fetched',
