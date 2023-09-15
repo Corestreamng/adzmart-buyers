@@ -1,7 +1,7 @@
 @component('mail::message')
 # Introduction
 
-The body of your message.
+You are recieving this mail because yo have requested a password reset on your Adzmart account.
 
 @component('mail::message')
     # Reset Your Password
