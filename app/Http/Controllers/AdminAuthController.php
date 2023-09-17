@@ -156,7 +156,7 @@ class AdminAuthController extends Controller
 
     private function sendResetEmail($user, $token)
     {
-        $resetUrl = env('APP_URL') . '/reset-pass?token=' . $token;
+        $resetUrl = 'https://adzmart.com/reset-pass?token=' . $token;
 
         Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
     }

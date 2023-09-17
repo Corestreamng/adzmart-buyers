@@ -118,9 +118,9 @@ class AuthController extends Controller
             'business_name' => $request->business_name ?? null
         ]);
 
-        if(isset($request->password)){
+        if (isset($request->password)) {
             User::find(Auth::id())->update(['password' => Hash::make($request->password)]);
-	}
+        }
 
         if ($user) {
             $user = Auth::id();
@@ -177,7 +177,7 @@ class AuthController extends Controller
 
     private function sendResetEmail($user, $token)
     {
-        $resetUrl = env('APP_URL') . '/reset-pass?token=' . $token;
+        $resetUrl = 'https://adzmart.com/reset-pass?token=' . $token;
 
         Mail::to($user->email)->send(new ResetPasswordMail($resetUrl));
     }
