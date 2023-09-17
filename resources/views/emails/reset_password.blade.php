@@ -1,18 +1,16 @@
 @component('mail::message')
+# Password Reset
 
-    # Introduction
+Hello,
 
-    You are recieving this mail because yo have requested a password reset on your Adzmart account.
-    # Reset Your Password
+You are receiving this email because we received a password reset request for your account.
 
-    Click the button below to reset your password:
+@component('mail::button', ['url' => $resetUrl])
+Reset Password
+@endcomponent
 
-    @component('mail::button', ['url' => $resetUrl])
-        Reset Password
-    @endcomponent
+If you did not request a password reset, no further action is required.
 
-    If you didn't request a password reset, no further action is required.
-
-    Thanks,
-    {{ config('app.name') }}
+Thank you,
+{{ config('app.name') }}
 @endcomponent
