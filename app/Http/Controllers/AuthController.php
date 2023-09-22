@@ -160,7 +160,7 @@ class AuthController extends Controller
         // Store the uploaded file
         $uploadedFile = $request->file('pic');
         $filename = time() . '_' . $uploadedFile->getClientOriginalName();
-        $path = $uploadedFile->storeAs('uploads', $filename);
+        $path = $uploadedFile->storeAs('local', $filename);
 
 
         $user = $user->update([
