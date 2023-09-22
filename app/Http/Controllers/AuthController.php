@@ -171,7 +171,7 @@ class AuthController extends Controller
             return response()->json([
                 'status' => 'success',
                 'message' => 'User profile picture updated successfully',
-                'user' => $user,
+                'user' => Auth::user(),
             ]);
         } else {
             return response()->json([
