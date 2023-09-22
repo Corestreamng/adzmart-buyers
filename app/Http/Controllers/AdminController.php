@@ -2546,7 +2546,7 @@ class AdminController extends Controller
     }
 
     /**
-     * approve suplier
+     * block suplier
      */
     public function blockSeller(Request $request, $supplier_id)
     {
@@ -2555,6 +2555,84 @@ class AdminController extends Controller
             $supplier = Supplier::find($supplier_id);
             $supplier->update([
                 'is_verified' => false
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'profile block successful',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * unblock suplier
+     */
+    public function unblockSeller(Request $request, $supplier_id)
+    {
+        try {
+            DB::beginTransaction();
+            $supplier = Supplier::find($supplier_id);
+            $supplier->update([
+                'is_verified' => true
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'profile unblock successful',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * block suplier
+     */
+    public function blockUser(Request $request, $user_id)
+    {
+        try {
+            DB::beginTransaction();
+            $user = User::find($user_id);
+            $user->update([
+                'blocked' => true
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'profile block successful',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
+
+    /**
+     * unblock suplier
+     */
+    public function unblockUser(Request $request, $user_id)
+    {
+        try {
+            DB::beginTransaction();
+            $user = User::find($user_id);
+            $user->update([
+                'blocked' => false
             ]);
             DB::commit();
             return response()->json([

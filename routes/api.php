@@ -143,6 +143,9 @@ Route::controller(AdminController::class)->group(function () {
     Route::get('get-seller/{supplier_id}', 'getSeller');
     Route::post('approve-seller/{supplier_id}', 'approveSeller');
     Route::post('block-seller/{supplier_id}', 'blockSeller');
+    Route::post('unblock-seller/{supplier_id}', 'unblockSeller');
+    Route::post('block-user/{user_id}', 'blockUser');
+    Route::post('unblock-user/{user_id}', 'unblockUser');
     Route::delete('delete-order/{order_id}', 'deleteOrder');
 });
 

@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Models;
+
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -23,7 +25,9 @@ class User extends Authenticatable implements JWTSubject
         'password',
         'business_name',
         'is_owner',
-        'belongs_to'
+        'belongs_to',
+        'blocked',
+        'pic'
     ];
 
     /**
@@ -45,7 +49,7 @@ class User extends Authenticatable implements JWTSubject
         'email_verified_at' => 'datetime',
     ];
 
-     /**
+    /**
      * Get the identifier that will be stored in the subject claim of the JWT.
      *
      * @return mixed
@@ -65,12 +69,13 @@ class User extends Authenticatable implements JWTSubject
         return [];
     }
 
-    public function team_members(){
-        return $this->hasMany(User::class,'belongs_to','id');
+    public function team_members()
+    {
+        return $this->hasMany(User::class, 'belongs_to', 'id');
     }
 
-    public function team_owner(){
-        return $this->belongsTo(User::class,'belongs_to','id');
+    public function team_owner()
+    {
+        return $this->belongsTo(User::class, 'belongs_to', 'id');
     }
-
 }
