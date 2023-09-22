@@ -165,7 +165,7 @@ class AuthController extends Controller
 
 
         $user = $user->update([
-            'pic' => $path,
+            'pic' => 'uploads/' . $filename,
         ]);
 
         if ($user && $path) {
