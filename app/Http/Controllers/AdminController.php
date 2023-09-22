@@ -2637,7 +2637,7 @@ class AdminController extends Controller
             DB::commit();
             return response()->json([
                 'status' => 'success',
-                'message' => 'profile block successful',
+                'message' => 'profile unblock successful',
             ]);
         } catch (\Exception $e) {
             DB::rollBack();
