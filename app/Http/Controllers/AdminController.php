@@ -2544,4 +2544,30 @@ class AdminController extends Controller
             ], 500);
         }
     }
+
+    /**
+     * approve suplier
+     */
+    public function blockSeller(Request $request, $supplier_id)
+    {
+        try {
+            DB::beginTransaction();
+            $supplier = Supplier::find($supplier_id);
+            $supplier->update([
+                'is_verified' => false
+            ]);
+            DB::commit();
+            return response()->json([
+                'status' => 'success',
+                'message' => 'profile block successful',
+            ]);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error($e->getMessage(), ['exception' => $e]);
+            return response()->json([
+                'status' => 'failure',
+                'message' => "An error occured"
+            ], 500);
+        }
+    }
 }
