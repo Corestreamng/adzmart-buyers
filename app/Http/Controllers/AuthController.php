@@ -147,6 +147,40 @@ class AuthController extends Controller
         }
     }
 
+    public function updateProfilePic(Request $request)
+    {
+        $request->validate([
+            'pic' => 'required|file|max:10240',
+        ]);
+
+        $user = Auth::id();
+
+        $user = User::find($user);
+
+        // Store the uploaded file
+        $uploadedFile = $request->file('pic');
+        $filename = time() . '_' . $uploadedFile->getClientOriginalName();
+        $path = $uploadedFile->storeAs('uploads', $filename);
+
+
+        $user = $user->update([
+            'pic' => $path,
+        ]);
+
+        if ($user && $path) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'User profile picture updated successfully',
+                'user' => $user,
+            ]);
+        } else {
+            return response()->json([
+                'status' => 'failure',
+                'message' => 'User profile picture update failed',
+            ], 500);
+        }
+    }
+
     public function refresh()
     {
         return response()->json([
